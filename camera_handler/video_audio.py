@@ -1,5 +1,3 @@
-# camera_handler/video_audio.py
-
 import cv2
 import pyaudio
 import threading
