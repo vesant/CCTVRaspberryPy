@@ -8,8 +8,16 @@ from options_sub.subMain import SubConsole
 from options_sub.tools.tools import save_snapshot
 from core.dataTX import DataTX
 
+
+def _parse_list(s, conv=str):
+    if not s:
+        return []
+    return [conv(x.strip()) for x in s.split(",") if x.strip() != ""]
+
+
 def parse_args():
     ap = argparse.ArgumentParser(description="CCTV 2x2 para Raspberry/Windows")
+
     ap.add_argument("--cams", type=int, default=4, help="Numero maximo de camaras (ate 4)")
     ap.add_argument("--width", type=int, default=640, help="Largura alvo por câmara")
     ap.add_argument("--height", type=int, default=360, help="Altura alvo por câmara")
@@ -18,41 +26,68 @@ def parse_args():
     ap.add_argument("--port", type=int, default=5050, help="Porta do servidor")
     ap.add_argument("--quality", type=int, default=70, help="Qualidade JPEG (envio)")
     ap.add_argument("--debug", action="store_true", help="Logs detalhados")
+
+    # para estabilizar no Windows / escolher por slot
+    ap.add_argument("--devs", type=str, default="", help="Lista de índices de câmara, ex.: 0,1,2,3")
+    ap.add_argument("--backends", type=str, default="",
+                    help="Lista por slot: dshow/msmf/v4l2/auto (ex.: dshow,msmf)")
+    ap.add_argument("--force-mjpg", action="store_true",
+                    help="Forçar FOURCC MJPG nas câmeras (ajuda em USB/Windows)")
+
     return ap.parse_args()
+
 
 def main():
     args = parse_args()
 
-    # 1 
-    # Camaras
-    m = MultiCamManager(max_cameras=min(4, args.cams),
-                        width=args.width, height=args.height, fps=args.fps,
-                        #enable_audio=False, # audio desativado por padrão, ativar se necessário
-                        enable_audio=True,
-                        debug=args.debug)
-    streams = m.start_all()
+    # listas opcionais
+    devs = _parse_list(args.devs, int)
+    backs = _parse_list(args.backends, str)
 
-    # 2 
+    # 1
+    # Câmaras
+    m = MultiCamManager(
+        device_indices=devs if devs else None,
+        backends=backs if backs else None,
+        max_cameras=min(4, args.cams),
+        width=args.width,
+        height=args.height,
+        fps=args.fps,
+        force_mjpg=args.force_mjpg,
+        # enable_audio=False,  # como tinhas, fica ligado
+        enable_audio=True,
+        debug=args.debug,
+    )
+    streams = m.start_all()  # mantém como tinhas
+
+    # 2
     # Networking (inicialmente desligado até o utilizador ligar no menu)
     tx = None
     tx_enabled = False
 
     if args.server:
         tx = DataTX(args.server, args.port, jpeg_quality=args.quality, debug=True)
-        # não inicia ja; fica a espera do toggle
+        # não inicia já; fica à espera do toggle
 
     # 3
     # SubMenu (consola)
     fullscreen = True
     window = "CCTV"
     cv2.namedWindow(window, cv2.WINDOW_NORMAL)
-    cv2.setWindowProperty(window, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty(
+        window,
+        cv2.WND_PROP_FULLSCREEN,
+        cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL,
+    )
 
     def toggle_fullscreen():
         nonlocal fullscreen
         fullscreen = not fullscreen
-        cv2.setWindowProperty(window, cv2.WND_PROP_FULLSCREEN,
-                              cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL)
+        cv2.setWindowProperty(
+            window,
+            cv2.WND_PROP_FULLSCREEN,
+            cv2.WINDOW_FULLSCREEN if fullscreen else cv2.WINDOW_NORMAL,
+        )
         print(f"[Main] Fullscreen: {fullscreen}")
 
     def toggle_tx():
@@ -90,14 +125,16 @@ def main():
         nonlocal running
         running = False
 
-    menu = SubConsole(on_toggle_fullscreen=toggle_fullscreen,
-                      on_toggle_tx=toggle_tx,
-                      on_snapshot=do_snapshot,
-                      on_reload_cams=reload_cams,
-                      on_quit=do_quit)
+    menu = SubConsole(
+        on_toggle_fullscreen=toggle_fullscreen,
+        on_toggle_tx=toggle_tx,
+        on_snapshot=do_snapshot,
+        on_reload_cams=reload_cams,
+        on_quit=do_quit,
+    )
     menu.start()
 
-    # 4 
+    # 4
     # Loop de UI
     running = True
     last_grid = None
@@ -121,13 +158,13 @@ def main():
 
         cv2.imshow(window, grid)
         key = cv2.waitKey(1) & 0xFF
-        if key == ord('q'):
+        if key == ord("q"):
             running = False
-        elif key == ord('f'):
+        elif key == ord("f"):
             toggle_fullscreen()
-        elif key == ord('t'):
+        elif key == ord("t"):
             toggle_tx()
-        elif key == ord('s'):
+        elif key == ord("s"):
             do_snapshot()
 
     # 5) Shutdown
@@ -137,6 +174,7 @@ def main():
     m.stop_all()
     cv2.destroyAllWindows()
     print("[Main] Terminado.")
+
 
 if __name__ == "__main__":
     main()
