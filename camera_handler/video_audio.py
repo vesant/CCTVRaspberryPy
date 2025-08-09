@@ -1,9 +1,12 @@
+import sys
+sys.path.insert(0, './libs')
+
 import cv2
 import pyaudio
 import threading
 import queue
 import time
-import numpy as np
+import numpy
 
 class CameraStream:
     def __init__(self, camera_index, audio_index=None, debug=False):
@@ -27,11 +30,11 @@ class CameraStream:
         self.RATE = 44100
 
     def start(self):
-        # Start video
+        # dá start do video
         self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW if self.debug else 0)
 
         if not self.cap.isOpened():
-            print(f"[Erro] Não foi possível abrir a câmera {self.camera_index}")
+            print(f"[Error]: Não foi possível abrir a câmera {self.camera_index}")
             return False
 
         # Start audio
@@ -44,7 +47,7 @@ class CameraStream:
                                                 input_device_index=self.audio_index,
                                                 frames_per_buffer=self.CHUNK)
             except Exception as e:
-                print(f"[Aviso] Áudio não iniciado para câmera {self.camera_index}: {e}")
+                print(f"[Warning]: Áudio não iniciado/ incopatível para câmera {self.camera_index}: {e}")
 
         self.running = True
         threading.Thread(target=self._update_video, daemon=True).start()
@@ -63,7 +66,7 @@ class CameraStream:
                         self.stop()
                         break
             else:
-                print(f"[Erro] Frame não capturado na câmera {self.camera_index}")
+                print(f"[Error]: Frame não capturado na câmera {self.camera_index}")
                 self.stop()
 
     def _update_audio(self):
@@ -73,7 +76,7 @@ class CameraStream:
                 if not self.audio_queue.full():
                     self.audio_queue.put(data)
             except Exception as e:
-                print(f"[Erro Áudio] Câmera {self.camera_index}: {e}")
+                print(f"[Error 'audio']: Câmera {self.camera_index}: {e}")
                 break
 
     def get_latest_frame(self):
@@ -104,8 +107,8 @@ def start_all_cameras(max_cameras=4, debug=False):
         cam = CameraStream(camera_index=i, audio_index=i, debug=debug)
         success = cam.start()
         if success:
-            print(f"[Info] Câmera {i} iniciada com sucesso.")
+            print(f"[Info]: Câmera {i} iniciada com sucesso...")
             streams.append(cam)
         else:
-            print(f"[Aviso] Ignorando câmera {i}.")
+            print(f"[Aviso]: Ignorando câmera {i}...")
     return streams
