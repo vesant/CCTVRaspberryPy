@@ -1,0 +1,9 @@
+{
+  "cams": 2,
+  "devs": [1, 0],
+  "backends": ["dshow", "msmf"],
+  "force_mjpg": true,
+  "width": 640,
+  "height": 360,
+  "fps": 15
+}
