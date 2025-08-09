@@ -21,7 +21,7 @@ BACKENDS = {
 }
 
 def try_open(idx, backend_name, width, height, fps, try_mjpg):
-    """Tenta abrir uma câmara com backend e definições. Devolve (ok, backend_usado)."""
+    """vai tenta abrir uma câmara com backend e definições. Devolve (ok, backend_usado)."""
     code = BACKENDS.get(backend_name, 0)
     cap = cv2.VideoCapture(idx, code)
     if not cap or not cap.isOpened():
@@ -59,7 +59,6 @@ def try_open(idx, backend_name, width, height, fps, try_mjpg):
 
 
 def detect_cameras(max_devs, max_index, width, height, fps, force_mjpg_default):
-    """Percorre índices até max_index e recolhe até max_devs câmaras funcionais."""
     os_name = platform.system()
     if os_name == "Windows":
         order = ["dshow", "msmf"]
