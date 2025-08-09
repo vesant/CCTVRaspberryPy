@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, './libs')
-
 import cv2
 import pyaudio
 import threading
